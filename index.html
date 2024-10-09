@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Share</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            perspective: 1000px;
+            transition: background 1s ease;
+            animation: gradient 20s ease infinite;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            text-align: center;
+            width: 80%;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            transform: rotateY(0deg);
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .container:hover {
+            transform: rotateY(15deg);
+        }
+
+        h1 {
+            color: #333;
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 20px 10px;
+            border-radius: 50px;
+            transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #45a049, #388E3C);
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.4), 0 10px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            background: linear-gradient(145deg, #45a049, #388E3C);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        #uuid-container {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #555;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            word-break: break-all;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        #uuid-container:hover {
+            background-color: #f0f0f0;
+        }
+
+        #notification {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            display: none;
+            animation: fadein 1s, fadeout 1s 4s;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 6px solid rgba(0, 0, 0, 0.1);
+            border-top: 6px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadein {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeout {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        @keyframes gradient {
+            0% { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            25% { background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%); }
+            50% { background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); }
+            75% { background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%); }
+            100% { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Screen Share</h1>
+        <button id="start-share" aria-live="polite">Start Share</button>
+        <button id="stop-share" aria-live="polite">Stop Share</button>
+        <div id="uuid-container" tabindex="0"></div>
+        <div id="notification" role="alert" aria-live="assertive"></div>
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const startShareButton = document.getElementById('start-share');
+            const stopShareButton = document.getElementById('stop-share');
+            const uuidContainer = document.getElementById('uuid-container');
+            const notification = document.getElementById('notification');
+            const spinner = document.getElementById('spinner');
+
+            const { ipcRenderer } = require('electron');
+
+            const showNotification = (message) => {
+                notification.innerText = message;
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 5000);
+            };
+
+            const toggleSpinner = (show) => {
+                spinner.style.display = show ? 'block' : 'none';
+            };
+
+            startShareButton.addEventListener('click', () => {
+                toggleSpinner(true);
+                ipcRenderer.send('start-share');
+                showNotification('Starting screen share...');
+            });
+
+            stopShareButton.addEventListener('click', () => {
+                toggleSpinner(true);
+                ipcRenderer.send('stop-share');
+                showNotification('Stopping screen share...');
+            });
+
+            ipcRenderer.on('uuid', (event, uuid) => {
+                toggleSpinner(false);
+                uuidContainer.innerText = `UUID: ${uuid}`;
+                showNotification('Screen share started. UUID copied to clipboard.');
+                navigator.clipboard.writeText(uuid);
+            });
+
+            uuidContainer.addEventListener('click', () => {
+                const uuidText = uuidContainer.innerText.replace('UUID: ', '');
+                navigator.clipboard.writeText(uuidText);
+                showNotification('UUID copied to clipboard.');
+            });
+
+            document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        });
+    </script>
+</body>
+</html>
